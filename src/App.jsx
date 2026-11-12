@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import Home from "./Home.jsx";
 
 const AVATARS = ["😀","😎","🤠","🦁","🐯","🦊","🐼","👑","🔥","⚡","🎯","🚀"];
 
 const box = {
   minHeight: "100vh",
-  background: "#12121c",
+  background: "linear-gradient(180deg,#4b3fa3 0%,#3a3180 45%,#2d2766 100%)",
   color: "#fff",
   fontFamily: "system-ui, sans-serif",
   display: "flex",
@@ -18,13 +19,14 @@ const box = {
 const btn = {
   padding: "14px 28px",
   fontSize: 18,
-  borderRadius: 12,
+  borderRadius: 14,
   border: "none",
-  background: "#f5c542",
-  color: "#000",
-  fontWeight: 700,
+  background: "linear-gradient(180deg,#ffd54a,#f5a623)",
+  color: "#5a2a00",
+  fontWeight: 800,
   cursor: "pointer",
   margin: 6,
+  boxShadow: "0 4px 0 #b36b00",
 };
 
 export default function App() {
@@ -113,8 +115,8 @@ export default function App() {
   if (!session) {
     return (
       <div style={box}>
-        <h1 style={{ fontSize: 48, margin: 0 }}>🎲 Ludo</h1>
-        <p style={{ opacity: 0.7 }}>Play Ludo online with friends</p>
+        <h1 style={{ fontSize: 52, margin: 0 }}>🎲 Ludo</h1>
+        <p style={{ opacity: 0.8 }}>Play Ludo online with friends</p>
         <button style={btn} onClick={signIn}>
           Continue with Google
         </button>
@@ -137,8 +139,8 @@ export default function App() {
                 margin: 4,
                 padding: 6,
                 borderRadius: 10,
-                border: a === avatar ? "2px solid #f5c542" : "2px solid transparent",
-                background: "#23233a",
+                border: a === avatar ? "2px solid #ffd54a" : "2px solid transparent",
+                background: "rgba(0,0,0,.3)",
                 cursor: "pointer",
               }}
             >
@@ -160,13 +162,13 @@ export default function App() {
             width: 240,
           }}
         />
-        {error && <p style={{ color: "#ff6b6b" }}>{error}</p>}
+        {error && <p style={{ color: "#ff9b9b" }}>{error}</p>}
         <button style={btn} onClick={saveProfile}>
           Save
         </button>
         {profile && (
           <button
-            style={{ ...btn, background: "#444", color: "#fff" }}
+            style={{ ...btn, background: "#555", color: "#fff", boxShadow: "none" }}
             onClick={() => setEditing(false)}
           >
             Cancel
@@ -177,27 +179,13 @@ export default function App() {
   }
 
   return (
-    <div style={box}>
-      <div style={{ fontSize: 72 }}>{profile.avatar}</div>
-      <h2 style={{ margin: 4 }}>{profile.display_name}</h2>
-      <p style={{ fontSize: 20 }}>
-        🪙 {profile.coins} &nbsp; 💎 {profile.diamonds}
-      </p>
-      <button style={btn} onClick={() => { window.location.hash = "play"; }}>
-        ▶ Play
-      </button>
-      <button
-        style={{ ...btn, background: "#23233a", color: "#fff" }}
-        onClick={() => setEditing(true)}
-      >
-        Edit profile
-      </button>
-      <button
-        style={{ ...btn, background: "#444", color: "#fff", fontSize: 14 }}
-        onClick={signOut}
-      >
-        Log out
-      </button>
-    </div>
+    <Home
+      profile={profile}
+      onPlayLocal={() => {
+        window.location.hash = "play";
+      }}
+      onEdit={() => setEditing(true)}
+      onLogout={signOut}
+    />
   );
-      }
+                                                                }
