@@ -183,7 +183,7 @@ export default function App() {
       <p style={{ fontSize: 20 }}>
         🪙 {profile.coins} &nbsp; 💎 {profile.diamonds}
       </p>
-      <button style={btn} onClick={() => alert("Game board coming next!")}>
+      <button style={btn} onClick={() => { window.location.hash = "play"; }}>
         ▶ Play
       </button>
       <button
