@@ -18,23 +18,36 @@ const TRACK = [
 const SAFE = [0, 8, 13, 21, 26, 34, 39, 47];
 
 const COLORS = [
-  { name: "Yellow", hex: "#f2b705", start: 0, origin: [0, 0],
+  { name: "Yellow", hex: "#ffca05",
+    grad: "linear-gradient(145deg,#fff36a,#ffb900,#d77b00)",
+    pawn: ["#ffce00", "#fff7a1", "#a75a00"],
+    start: 0, origin: [0, 0],
     home: [[1,7],[2,7],[3,7],[4,7],[5,7]],
     base: [[1,1],[4,1],[1,4],[4,4]], done: [6.7, 7.5] },
-  { name: "Blue", hex: "#1e88e5", start: 13, origin: [9, 0],
+  { name: "Blue", hex: "#087cff",
+    grad: "linear-gradient(145deg,#60eaff,#0879ff,#0641a8)",
+    pawn: ["#00caff", "#baffff", "#003dba"],
+    start: 13, origin: [9, 0],
     home: [[7,1],[7,2],[7,3],[7,4],[7,5]],
     base: [[10,1],[13,1],[10,4],[13,4]], done: [7.5, 6.7] },
-  { name: "Red", hex: "#e2493b", start: 26, origin: [9, 9],
+  { name: "Red", hex: "#f21d16",
+    grad: "linear-gradient(145deg,#ff8982,#fa211b,#a50016)",
+    pawn: ["#ff302b", "#ffc0ad", "#970000"],
+    start: 26, origin: [9, 9],
     home: [[13,7],[12,7],[11,7],[10,7],[9,7]],
     base: [[10,10],[13,10],[10,13],[13,13]], done: [8.3, 7.5] },
-  { name: "Green", hex: "#2ecc71", start: 39, origin: [0, 9],
+  { name: "Green", hex: "#0fd63a",
+    grad: "linear-gradient(145deg,#aaff54,#00db38,#00852a)",
+    pawn: ["#39f500", "#d6ff8c", "#087b00"],
+    start: 39, origin: [0, 9],
     home: [[7,13],[7,12],[7,11],[7,10],[7,9]],
     base: [[1,10],[4,10],[1,13],[4,13]], done: [7.5, 8.3] },
 ];
 
+const NEUTRAL = "linear-gradient(145deg,#ffffff,#dce6f7)";
 const CELL = {};
 TRACK.forEach(([c, r], i) => {
-  CELL[c + "," + r] = { bg: "#eef1fb", star: SAFE.includes(i) };
+  CELL[c + "," + r] = { bg: NEUTRAL, star: SAFE.includes(i) };
 });
 COLORS.forEach((col) => {
   col.home.forEach(([c, r]) => {
@@ -71,25 +84,45 @@ function centerOf(ci, pos, t) {
 
 const page = {
   minHeight: "100vh",
-  background: "linear-gradient(180deg,#4b3fa3 0%,#3a3180 45%,#2d2766 100%)",
+  background:
+    "radial-gradient(ellipse at 50% 12%, rgba(62,130,255,.55), transparent 45%), linear-gradient(145deg,#02072b,#081a55,#16043b)",
   color: "#fff",
-  fontFamily: "system-ui, sans-serif",
+  fontFamily: "system-ui, Arial, sans-serif",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  padding: "12px 12px 130px",
+  padding: "10px 10px 130px",
   boxSizing: "border-box",
   textAlign: "center",
 };
 const pill = {
-  background: "rgba(0,0,0,.3)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 20,
-  padding: "8px 14px",
-  fontSize: 16,
+  border: "2px solid #ffcf54",
+  background: "linear-gradient(145deg,#15245d,#050b2d)",
+  boxShadow: "0 0 12px #148bff",
+  borderRadius: 14,
+  padding: "6px 10px",
   fontWeight: 700,
+  color: "#fff",
+  fontSize: 14,
   cursor: "pointer",
+};
+const round = {
+  ...pill,
+  width: 40,
+  height: 40,
+  padding: 0,
+  fontSize: 24,
+  display: "grid",
+  placeItems: "center",
+};
+const chatBtn = {
+  ...pill,
+  background: "linear-gradient(145deg,#32236c,#080f3c)",
+  border: "2px solid #d7aaff",
+  boxShadow: "0 0 10px #8a4dff",
+  borderRadius: 20,
+  padding: "8px 16px",
+  fontSize: 15,
 };
 const yellowBtn = {
   padding: "14px 28px",
@@ -105,13 +138,20 @@ const yellowBtn = {
 };
 const phrase = {
   background: "#fff",
-  color: "#2d3a8c",
-  border: "2px solid #c7d0f5",
+  color: "#16245d",
+  border: "2px solid #ffcf54",
   borderRadius: 20,
   padding: "10px 6px",
   fontSize: 15,
   fontWeight: 700,
   cursor: "pointer",
+};
+const logo = {
+  fontSize: 22,
+  fontWeight: 900,
+  color: "#fff2a2",
+  textShadow: "0 3px #a34a00, 0 0 18px #ffcf35",
+  lineHeight: 1,
 };
 
 function Die({ v, rolling, disabled, glow, onClick }) {
@@ -120,15 +160,15 @@ function Die({ v, rolling, disabled, glow, onClick }) {
       onClick={onClick}
       disabled={disabled}
       style={{
-        width: 78,
-        height: 78,
-        borderRadius: 18,
+        width: 70,
+        height: 70,
+        borderRadius: 16,
         background: "#fff",
         border: "none",
         display: "grid",
         gridTemplateColumns: "repeat(3,1fr)",
         gridTemplateRows: "repeat(3,1fr)",
-        padding: 12,
+        padding: 11,
         gap: 2,
         boxSizing: "border-box",
         animation: rolling ? "shake .25s infinite" : "none",
@@ -206,15 +246,14 @@ export default function Game() {
   };
 
   const topBar = (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        width: "min(94vw, 440px)",
-      }}
-    >
-      <button style={pill} onClick={goHome}>‹ Back</button>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", maxWidth: 440 }}>
+      <button style={round} onClick={goHome}>‹</button>
+      <div style={{ textAlign: "left" }}>
+        <div style={logo}>♛ LUDO</div>
+        <div style={{ fontSize: 9, letterSpacing: 1, color: "#ffe887", fontWeight: 700 }}>
+          ROYAL FANTASY
+        </div>
+      </div>
       <div style={{ flex: 1 }} />
       <div style={pill}>💎 {wallet.diamonds}</div>
       <div style={pill}>🪙 {wallet.coins}</div>
@@ -225,26 +264,29 @@ export default function Game() {
     return (
       <div style={page}>
         {topBar}
-        <h2 style={{ marginTop: 40 }}>Select Players</h2>
+        <h2 style={{ marginTop: 40, color: "#ffdb75", textShadow: "0 0 12px orange" }}>
+          Select Players
+        </h2>
         <div style={{ display: "flex", gap: 10 }}>
           {[2, 3, 4].map((n) => (
             <button
               key={n}
               onClick={() => setCount(n)}
               style={{
-                width: 96,
+                width: 92,
                 height: 90,
                 borderRadius: 16,
                 border: count === n ? "4px solid #ffd54a" : "4px solid transparent",
-                background: "linear-gradient(180deg,#4fb3ff,#4a6cf0)",
+                background: "linear-gradient(#26dfff,#0060ff,#062a9d)",
+                boxShadow: "0 0 14px #00aaff",
                 color: "#fff",
-                fontSize: 24,
-                fontWeight: 800,
+                fontSize: 26,
+                fontWeight: 900,
                 cursor: "pointer",
               }}
             >
               {n}
-              <div style={{ fontSize: 14 }}>Players</div>
+              <div style={{ fontSize: 13 }}>Players</div>
             </button>
           ))}
         </div>
@@ -262,13 +304,14 @@ export default function Game() {
   }
 
   const ci = players[turn];
+  const canRoll = !(rolling || dice !== null || winner !== null);
   const movable =
     dice !== null && !rolling
       ? [0, 1, 2, 3].filter((t) => canMove(tokens[ci][t], dice))
       : [];
 
   const roll = () => {
-    if (rolling || dice !== null || winner !== null) return;
+    if (!canRoll) return;
     setRolling(true);
     setMsg("");
     let n = 0;
@@ -341,14 +384,13 @@ export default function Game() {
     bubbleTimer.current = setTimeout(() => setBubble(null), 2500);
   };
 
-  const hint =
-    msg || (dice === null ? "Tap the dice to roll" : "Tap a glowing pawn");
+  const hint = msg || (dice === null ? "Tap GO to roll" : "Tap a glowing pawn");
 
   return (
     <div style={page}>
       <style>{`
         @keyframes shake { 0%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} 100%{transform:rotate(-8deg)} }
-        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,255,255,.9)} 100%{box-shadow:0 0 0 12px rgba(255,255,255,0)} }
+        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,255,255,.95)} 100%{box-shadow:0 0 0 12px rgba(255,255,255,0)} }
         @keyframes pop { 0%{transform:scale(.6);opacity:0} 100%{transform:scale(1);opacity:1} }
       `}</style>
 
@@ -356,162 +398,248 @@ export default function Game() {
 
       <div
         style={{
-          position: "relative",
-          width: "min(94vw, 440px)",
-          aspectRatio: "1 / 1",
-          margin: "14px auto",
-          background: "#eef1fb",
-          borderRadius: 14,
-          overflow: "hidden",
-          boxShadow: "0 8px 24px rgba(0,0,0,.45)",
+          margin: "8px 0 6px",
+          color: "#ffdb75",
+          textShadow: "0 0 12px orange",
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: 1,
         }}
       >
-        {COLORS.map((col) => (
-          <div
-            key={col.name}
-            style={{
-              position: "absolute",
-              left: (col.origin[0] / 15) * 100 + "%",
-              top: (col.origin[1] / 15) * 100 + "%",
-              width: "40%",
-              height: "40%",
-              background: col.hex,
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: "16%",
-                background: "rgba(0,0,0,.28)",
-                borderRadius: 14,
-              }}
-            />
-          </div>
-        ))}
+        🏰 ✦ THE ENCHANTED KINGDOM ✦ 🐉
+      </div>
 
-        {COLORS.map((col) =>
-          col.base.map(([c, r], i) => (
-            <div
-              key={col.name + i}
-              style={{
-                position: "absolute",
-                left: ((c + 0.5) / 15) * 100 + "%",
-                top: ((r + 0.5) / 15) * 100 + "%",
-                width: (100 / 15) * 0.85 + "%",
-                height: (100 / 15) * 0.85 + "%",
-                transform: "translate(-50%,-50%)",
-                borderRadius: "50%",
-                background: "rgba(0,0,0,.3)",
-              }}
-            />
-          ))
-        )}
-
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          padding: 6,
+          borderRadius: 24,
+          boxSizing: "border-box",
+          background: "linear-gradient(135deg,#fff3a0,#a65a00,#ffe66b,#6c3500)",
+          boxShadow: "0 0 25px #00aaff, 0 12px 25px rgba(0,11,0,.7)",
+        }}
+      >
         <div
           style={{
-            position: "absolute",
-            left: "40%",
-            top: "40%",
-            width: "20%",
-            height: "20%",
-            background: `conic-gradient(from 45deg, ${COLORS[2].hex} 0 25%, ${COLORS[3].hex} 25% 50%, ${COLORS[0].hex} 50% 75%, ${COLORS[1].hex} 75% 100%)`,
-          }}
-        />
-
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "grid",
-            gridTemplateColumns: "repeat(15,1fr)",
-            gridTemplateRows: "repeat(15,1fr)",
+            position: "relative",
+            width: "100%",
+            aspectRatio: "1 / 1",
+            background: "#dce7ff",
+            borderRadius: 15,
+            overflow: "hidden",
           }}
         >
-          {Array.from({ length: 225 }).map((_, i) => {
-            const c = i % 15;
-            const r = Math.floor(i / 15);
-            const cell = CELL[c + "," + r];
-            return (
+          {COLORS.map((col) => (
+            <div
+              key={col.name}
+              style={{
+                position: "absolute",
+                left: (col.origin[0] / 15) * 100 + "%",
+                top: (col.origin[1] / 15) * 100 + "%",
+                width: "40%",
+                height: "40%",
+                background: col.grad,
+                border: "2px solid rgba(255,255,255,.5)",
+                boxSizing: "border-box",
+              }}
+            >
               <div
-                key={i}
-                style={{
-                  background: cell ? cell.bg : "transparent",
-                  border: cell
-                    ? cell.lane
-                      ? "1px solid rgba(255,255,255,.4)"
-                      : "1px solid #cdd5ee"
-                    : "none",
-                  boxSizing: "border-box",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "clamp(9px, 3.2vw, 14px)",
-                  color: cell && cell.onColor ? "rgba(0,0,0,.35)" : "#8d97bd",
-                }}
-              >
-                {cell && cell.star ? "★" : ""}
-              </div>
-            );
-          })}
-        </div>
-
-        {players.map((pi) =>
-          tokens[pi].map((pos, t) => {
-            const [x, y] = centerOf(pi, pos, t);
-            const isMovable = pi === ci && movable.includes(t);
-            return (
-              <div
-                key={pi + "-" + t}
-                onClick={() => isMovable && moveToken(t)}
                 style={{
                   position: "absolute",
-                  left: (x / 15) * 100 + "%",
-                  top: (y / 15) * 100 + "%",
-                  width: (100 / 15) * 0.74 + "%",
-                  height: (100 / 15) * 0.74 + "%",
-                  transform: "translate(-50%,-50%)",
-                  borderRadius: "50%",
-                  background: `radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), rgba(255,255,255,0) 40%), ${COLORS[pi].hex}`,
-                  border: "2px solid rgba(255,255,255,.95)",
-                  boxSizing: "border-box",
-                  boxShadow: "0 3px 5px rgba(0,0,0,.45), inset 0 -4px 6px rgba(0,0,0,.25)",
-                  transition: "left .25s, top .25s",
-                  zIndex: isMovable ? 6 : 4,
-                  cursor: isMovable ? "pointer" : "default",
-                  animation: isMovable ? "pulse .8s infinite" : "none",
+                  inset: "16%",
+                  background: "rgba(6,19,59,.35)",
+                  borderRadius: 14,
+                  boxShadow: "inset 0 0 16px rgba(0,0,0,.55)",
                 }}
               />
-            );
-          })
-        )}
+            </div>
+          ))}
+
+          {COLORS.map((col) =>
+            col.base.map(([c, r], i) => (
+              <div
+                key={col.name + i}
+                style={{
+                  position: "absolute",
+                  left: ((c + 0.5) / 15) * 100 + "%",
+                  top: ((r + 0.5) / 15) * 100 + "%",
+                  width: (100 / 15) * 0.85 + "%",
+                  height: (100 / 15) * 0.85 + "%",
+                  transform: "translate(-50%,-50%)",
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,.3)",
+                }}
+              />
+            ))
+          )}
+
+          <div
+            style={{
+              position: "absolute",
+              left: "40%",
+              top: "40%",
+              width: "20%",
+              height: "20%",
+              background: `conic-gradient(from 45deg, ${COLORS[2].hex} 0 25%, ${COLORS[3].hex} 25% 50%, ${COLORS[0].hex} 50% 75%, ${COLORS[1].hex} 75% 100%)`,
+              display: "grid",
+              placeItems: "center",
+              color: "#fff",
+              fontSize: 20,
+              textShadow: "0 0 10px #fff",
+            }}
+          >
+            ✦
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "grid",
+              gridTemplateColumns: "repeat(15,1fr)",
+              gridTemplateRows: "repeat(15,1fr)",
+            }}
+          >
+            {Array.from({ length: 225 }).map((_, i) => {
+              const c = i % 15;
+              const r = Math.floor(i / 15);
+              const cell = CELL[c + "," + r];
+              return (
+                <div
+                  key={i}
+                  style={{
+                    background: cell ? cell.bg : "transparent",
+                    border: cell
+                      ? cell.lane
+                        ? "1px solid rgba(255,255,255,.45)"
+                        : "1px solid #aab8d0"
+                      : "none",
+                    boxSizing: "border-box",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "clamp(9px, 3.2vw, 14px)",
+                    color: cell && cell.onColor ? "#fff" : "#8a5a00",
+                  }}
+                >
+                  {cell && cell.star ? "★" : ""}
+                </div>
+              );
+            })}
+          </div>
+
+          {players.map((pi) =>
+            tokens[pi].map((pos, t) => {
+              const [x, y] = centerOf(pi, pos, t);
+              const isMovable = pi === ci && movable.includes(t);
+              const pc = COLORS[pi].pawn;
+              return (
+                <div
+                  key={pi + "-" + t}
+                  onClick={() => isMovable && moveToken(t)}
+                  style={{
+                    position: "absolute",
+                    left: (x / 15) * 100 + "%",
+                    top: (y / 15) * 100 + "%",
+                    width: (100 / 15) * 0.7 + "%",
+                    height: (100 / 15) * 0.7 + "%",
+                    transform: "translate(-50%,-50%)",
+                    borderRadius: "50%",
+                    background: `radial-gradient(circle at 32% 25%, #fff, ${pc[0]}, ${pc[2]})`,
+                    border: "2px solid rgba(255,255,255,.7)",
+                    boxSizing: "border-box",
+                    boxShadow: `0 5px 5px rgba(0,0,0,.6), 0 0 9px ${pc[1]}`,
+                    transition: "left .25s, top .25s",
+                    zIndex: isMovable ? 6 : 4,
+                    cursor: isMovable ? "pointer" : "default",
+                    animation: isMovable ? "pulse .8s infinite" : "none",
+                  }}
+                >
+                  <i
+                    style={{
+                      position: "absolute",
+                      width: "43%",
+                      height: "43%",
+                      borderRadius: "50%",
+                      left: "28%",
+                      top: "-28%",
+                      background: `radial-gradient(circle, #fff, ${pc[0]}, ${pc[2]})`,
+                    }}
+                  />
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "2px 0 12px" }}>
-        <span
-          style={{
-            width: 16,
-            height: 16,
-            borderRadius: "50%",
-            background: COLORS[ci].hex,
-          }}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+          margin: "14px 0 4px",
+          width: "100%",
+          maxWidth: 440,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 28,
+              background: `radial-gradient(circle, rgba(255,255,255,.4), ${COLORS[ci].hex})`,
+              border: "4px solid #ffd84d",
+              boxShadow: `0 0 15px ${COLORS[ci].hex}`,
+            }}
+          >
+            ♟
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#ffe887", marginTop: 2 }}>
+            {COLORS[ci].name}
+          </div>
+        </div>
+
+        <Die
+          v={face}
+          rolling={rolling}
+          glow={COLORS[ci].hex}
+          disabled={!canRoll}
+          onClick={roll}
         />
-        <b style={{ fontSize: 20 }}>{COLORS[ci].name}'s turn</b>
-      </div>
 
-      <Die
-        v={face}
-        rolling={rolling}
-        glow={COLORS[ci].hex}
-        disabled={rolling || dice !== null || winner !== null}
-        onClick={roll}
-      />
-      <p style={{ opacity: 0.9, minHeight: 24 }}>{hint}</p>
+        <button
+          onClick={roll}
+          disabled={!canRoll}
+          style={{
+            border: "3px solid #ffda57",
+            borderRadius: 20,
+            padding: "10px 26px",
+            background: "linear-gradient(#26dfff,#0060ff,#062a9d)",
+            boxShadow: "0 0 18px #00aaff",
+            color: "#fff",
+            fontSize: 30,
+            fontWeight: 900,
+            opacity: canRoll ? 1 : 0.45,
+            cursor: canRoll ? "pointer" : "default",
+          }}
+        >
+          GO
+        </button>
+      </div>
+      <p style={{ opacity: 0.9, minHeight: 24, margin: "8px 0" }}>{hint}</p>
 
       {bubble && (
         <div
           style={{
             position: "fixed",
-            top: 64,
+            top: 70,
             left: 0,
             right: 0,
             display: "flex",
@@ -529,7 +657,7 @@ export default function Game() {
               fontSize: bubble.big ? 46 : 18,
               fontWeight: 700,
               border: `3px solid ${COLORS[bubble.ci].hex}`,
-              boxShadow: "0 4px 14px rgba(0,0,0,.4)",
+              boxShadow: "0 4px 14px rgba(0,0,0,.5)",
               animation: "pop .25s",
             }}
           >
@@ -538,130 +666,4 @@ export default function Game() {
         </div>
       )}
 
-      {panel && (
-        <div
-          style={{
-            position: "fixed",
-            left: 12,
-            bottom: 112,
-            width: "min(92vw, 360px)",
-            background: "#e9ecfb",
-            borderRadius: 16,
-            padding: 12,
-            zIndex: 24,
-            boxShadow: "0 6px 20px rgba(0,0,0,.5)",
-            boxSizing: "border-box",
-          }}
-        >
-          {panel === "emoji" ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => sendMsg(e, true)}
-                  style={{
-                    fontSize: 34,
-                    background: "transparent",
-                    border: "none",
-                    padding: 6,
-                    cursor: "pointer",
-                  }}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {PHRASES.map((p) => (
-                  <button key={p} onClick={() => sendMsg(p, false)} style={phrase}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <input
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  maxLength={40}
-                  placeholder="Enter message"
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "none",
-                    fontSize: 16,
-                  }}
-                />
-                <button
-                  style={{ ...yellowBtn, margin: 0, padding: "10px 16px", fontSize: 16 }}
-                  onClick={() => sendMsg(text, false)}
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div
-        style={{
-          position: "fixed",
-          left: 12,
-          bottom: 12,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          zIndex: 25,
-        }}
-      >
-        <button style={pill} onClick={() => setPanel(panel === "emoji" ? null : "emoji")}>
-          😀 Emoji
-        </button>
-        <button style={pill} onClick={() => setPanel(panel === "chat" ? null : "chat")}>
-          💬 Chat
-        </button>
-      </div>
-
-      <button
-        style={{ ...pill, position: "fixed", right: 12, bottom: 12, zIndex: 25 }}
-        onClick={() => {
-          setPanel(null);
-          setMsg("Pick-a-number (💎 10) comes with online games");
-        }}
-      >
-        💎 Pick number
-      </button>
-
-      {winner !== null && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.85)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 40,
-          }}
-        >
-          <div style={{ fontSize: 72 }}>🏆</div>
-          <h2 style={{ color: COLORS[winner].hex }}>{COLORS[winner].name} wins!</h2>
-          <button style={yellowBtn} onClick={() => setPlayers([])}>
-            Play again
-          </button>
-          <button
-            style={{ ...yellowBtn, background: "#444", color: "#fff", boxShadow: "none" }}
-            onClick={goHome}
-          >
-            Home
-          </button>
-        </div>
-      )}
-    </div>
-  );
-  }
+      {pa
