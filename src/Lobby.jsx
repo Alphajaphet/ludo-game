@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
 import AuthGate from "./AuthGate.jsx";
-import { page, round, yellowBtn, logo } from "./ludoData.js";
+import { page, round, yellowBtn, pill, logo } from "./ludoData.js";
 
 function LobbyInner() {
   const [max, setMax] = useState(2);
@@ -13,27 +13,22 @@ function LobbyInner() {
     window.location.hash = "room-" + c;
   };
 
-  const create = async () => {
+  const run = async (fn, args) => {
     setBusy(true);
     setErr("");
-    const { data, error } = await supabase.rpc("create_room", { p_max: max });
+    const { data, error } = await supabase.rpc(fn, args);
     setBusy(false);
     if (error) setErr(error.message);
     else go(data.code);
   };
 
-  const join = async () => {
+  const join = () => {
     const c = code.trim().toUpperCase();
     if (c.length < 3) {
       setErr("Enter the room code");
       return;
     }
-    setBusy(true);
-    setErr("");
-    const { data, error } = await supabase.rpc("join_room", { p_code: c });
-    setBusy(false);
-    if (error) setErr(error.message);
-    else go(data.code);
+    run("join_room", { p_code: c });
   };
 
   return (
@@ -43,11 +38,11 @@ function LobbyInner() {
         <div style={logo}>♛ LUDO</div>
       </div>
 
-      <h2 style={{ marginTop: 28, color: "#ffdb75", textShadow: "0 0 12px orange" }}>
+      <h2 style={{ marginTop: 24, color: "#ffdb75", textShadow: "0 0 12px orange" }}>
         Play online
       </h2>
 
-      <p style={{ margin: "4px 0", fontWeight: 700 }}>Create a room</p>
+      <p style={{ margin: "0 0 8px", fontWeight: 700 }}>How many players?</p>
       <div style={{ display: "flex", gap: 10 }}>
         {[2, 3, 4].map((n) => (
           <button
@@ -71,29 +66,47 @@ function LobbyInner() {
           </button>
         ))}
       </div>
-      <button style={{ ...yellowBtn, marginTop: 14 }} onClick={create} disabled={busy}>
-        Create room
+
+      <button
+        style={{ ...yellowBtn, marginTop: 20, fontSize: 24, padding: "16px 40px" }}
+        onClick={() => run("quick_match", { p_max: max })}
+        disabled={busy}
+      >
+        ⚡ Play now
+      </button>
+      <p style={{ opacity: 0.75, margin: "0 0 6px", fontSize: 13, maxWidth: 280 }}>
+        Finds other players who are online and want to play
+      </p>
+
+      <button
+        style={{ ...pill, marginTop: 14, padding: "12px 22px", fontSize: 16 }}
+        onClick={() => run("create_room", { p_max: max })}
+        disabled={busy}
+      >
+        👥 Create private room (invite friends)
       </button>
 
-      <p style={{ margin: "30px 0 6px", fontWeight: 700 }}>Or join with a code</p>
-      <input
-        value={code}
-        onChange={(e) => setCode(e.target.value.toUpperCase())}
-        maxLength={5}
-        placeholder="CODE"
-        style={{
-          padding: 12,
-          fontSize: 24,
-          letterSpacing: 6,
-          borderRadius: 10,
-          border: "none",
-          textAlign: "center",
-          width: 180,
-        }}
-      />
-      <button style={{ ...yellowBtn, marginTop: 10 }} onClick={join} disabled={busy}>
-        Join
-      </button>
+      <p style={{ margin: "28px 0 6px", fontWeight: 700 }}>Have a code?</p>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          maxLength={5}
+          placeholder="CODE"
+          style={{
+            padding: 12,
+            fontSize: 22,
+            letterSpacing: 6,
+            borderRadius: 10,
+            border: "none",
+            textAlign: "center",
+            width: 150,
+          }}
+        />
+        <button style={{ ...yellowBtn, margin: 0, padding: "12px 24px" }} onClick={join} disabled={busy}>
+          Join
+        </button>
+      </div>
       {err && <p style={{ color: "#ff9b9b" }}>{err}</p>}
     </div>
   );
@@ -101,4 +114,4 @@ function LobbyInner() {
 
 export default function Lobby() {
   return <AuthGate>{() => <LobbyInner />}</AuthGate>;
-              }
+}
