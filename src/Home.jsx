@@ -153,7 +153,7 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
 
         <div style={{ display: "flex", gap: 12, margin: "18px 0 12px" }}>
           <button
-            onClick={() => soon("Online play")}
+            onClick={() => { window.location.hash = "online"; }}
             style={{
               ...card,
               flex: 1,
@@ -195,7 +195,7 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
 
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => soon("Invite friends")}
+            onClick={() => { window.location.hash = "online"; }}
             style={{
               ...card,
               flex: 1,
