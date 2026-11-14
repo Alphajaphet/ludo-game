@@ -4,6 +4,7 @@ import AuthGate from "./AuthGate.jsx";
 import Board from "./Board.jsx";
 import Waiting from "./Waiting.jsx";
 import { Die, ChatArea, Bubble, Winner } from "./Parts.jsx";
+import { PlayerBar, TurnTimer, calcProgress } from "./Progress.jsx";
 import { COLORS, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 
 function Room({ code, myId }) {
@@ -16,10 +17,17 @@ function Room({ code, myId }) {
   const [text, setText] = useState("");
   const [bubble, setBubble] = useState(null);
   const [note, setNote] = useState("");
+  const [, setTick] = useState(0);
   const seen = useRef(null);
   const rollTimer = useRef(null);
   const bubbleTimer = useRef(null);
   const channel = useRef(null);
+  const roomRef = useRef(null);
+  const offsetRef = useRef(0);
+  const botKey = useRef("");
+  const botAt = useRef(0);
+
+  roomRef.current = room;
 
   const showBubble = (p) => {
     setBubble(p);
@@ -38,6 +46,13 @@ function Room({ code, myId }) {
       alive = false;
     };
   }, [code]);
+
+  useEffect(() => {
+    const t0 = Date.now();
+    supabase.rpc("server_now").then(({ data }) => {
+      if (data) offsetRef.current = new Date(data).getTime() - (t0 + Date.now()) / 2;
+    });
+  }, []);
 
   const roomId = room && room.id;
 
@@ -63,6 +78,25 @@ function Room({ code, myId }) {
       supabase.removeChannel(ch);
     };
   }, [roomId]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTick((x) => x + 1);
+      const r = roomRef.current;
+      if (!r || r.status !== "playing" || !r.turn_deadline) return;
+      const late = Date.now() + offsetRef.current - new Date(r.turn_deadline).getTime();
+      const mine = r.seats[r.turn] && r.seats[r.turn].uid === myId;
+      if (late < (mine ? 300 : 2500)) return;
+      const key = r.roll_no + ":" + r.turn + ":" + (r.dice === null ? "r" : "m") + ":" + r.turn_deadline;
+      if (botKey.current === key && Date.now() - botAt.current < 3000) return;
+      botKey.current = key;
+      botAt.current = Date.now();
+      supabase.rpc("bot_play", { p_id: r.id }).then(({ data }) => {
+        if (data) setRoom(data);
+      });
+    }, 250);
+    return () => clearInterval(id);
+  }, [myId]);
 
   useEffect(() => {
     if (!room) return;
@@ -165,6 +199,29 @@ function Room({ code, myId }) {
       ? [0, 1, 2, 3].filter((t) => canMove(room.tokens[ci][t], room.dice))
       : [];
 
+  const deadlineMs = room.turn_deadline ? new Date(room.turn_deadline).getTime() : 0;
+  const left = deadlineMs
+    ? Math.max(0, (deadlineMs - (Date.now() + offsetRef.current)) / 1000)
+    : 0;
+  const timerText =
+    left <= 0.3
+      ? "🤖 Robot is playing..."
+      : myTurn
+      ? room.dice === null
+        ? "Your turn: roll the dice!"
+        : "Your turn: pick a pawn!"
+      : cur.name + " is playing";
+
+  const items = seats.map((s, i) => ({
+    key: s.uid,
+    color: s.color,
+    label: s.name,
+    avatar: s.avatar,
+    pct: calcProgress(room.tokens[s.color]),
+    active: i === room.turn,
+    you: s.uid === myId,
+  }));
+
   const roll = async () => {
     if (!canRoll) return;
     setBusy(true);
@@ -217,29 +274,11 @@ function Room({ code, myId }) {
         <div style={pill}>Room {room.code}</div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", margin: "8px 0" }}>
-        {seats.map((s, i) => (
-          <div
-            key={s.uid}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "4px 10px",
-              borderRadius: 16,
-              background: "rgba(0,0,0,.35)",
-              border: i === room.turn ? "2px solid " + COLORS[s.color].hex : "2px solid transparent",
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
-            <span
-              style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS[s.color].hex }}
-            />
-            {s.avatar} {s.name}
-          </div>
-        ))}
-      </div>
+      <PlayerBar items={items} />
+
+      {deadlineMs > 0 && !ended && (
+        <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+      )}
 
       <Board players={players} tokens={room.tokens} ci={ci} movable={movable} onMove={move} />
 
@@ -274,7 +313,6 @@ function Room({ code, myId }) {
       </div>
 
       <p style={{ opacity: 0.9, minHeight: 24, margin: "8px 0" }}>{note || room.msg || hint}</p>
-      {note && !ended && null}
 
       <Bubble bubble={bubble} />
 
@@ -302,4 +340,4 @@ export default function RoomPage({ code }) {
       {(session) => <Room code={code} myId={session.user.id} />}
     </AuthGate>
   );
-            }
+    }
