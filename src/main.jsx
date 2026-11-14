@@ -4,10 +4,25 @@ import App from "./App.jsx";
 import Game from "./Game.jsx";
 import Lobby from "./Lobby.jsx";
 import RoomPage from "./RoomPage.jsx";
+import Welcome from "./Welcome.jsx";
 import { supabase } from "./supabase";
 
 function Root() {
   const [hash, setHash] = useState(window.location.hash);
+  const [welcomed, setWelcomed] = useState(() => {
+    try {
+      return sessionStorage.getItem("welcomed") === "1";
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const finish = () => {
+    try {
+      sessionStorage.setItem("welcomed", "1");
+    } catch (e) {}
+    setWelcomed(true);
+  };
 
   useEffect(() => {
     const onHash = () => setHash(window.location.hash);
@@ -36,6 +51,8 @@ function Root() {
     }, 1500);
     return () => clearInterval(id);
   }, [isHome]);
+
+  if (!welcomed) return <Welcome onDone={finish} />;
 
   if (hash === "#play") return <Game />;
   if (hash === "#online") return <Lobby />;
