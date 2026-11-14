@@ -49,7 +49,7 @@ export function PlayerBar({ items }) {
                 textOverflow: "ellipsis",
               }}
             >
-              {it.avatar} {it.you ? "You" : it.label}
+              {it.auto ? "🤖" : it.avatar} {it.you ? "You" : it.label}
             </div>
             <div style={{ fontSize: 18, fontWeight: 900, color: c, lineHeight: 1.2 }}>
               {it.pct}%
@@ -80,7 +80,7 @@ export function PlayerBar({ items }) {
 
 export function TurnTimer({ left, total, color, text }) {
   const frac = Math.max(0, Math.min(1, left / total));
-  const urgent = left <= 3;
+  const urgent = left <= 3 && total >= 5;
   return (
     <div style={{ width: "100%", maxWidth: 440, margin: "4px 0 6px" }}>
       <div
@@ -107,4 +107,48 @@ export function TurnTimer({ left, total, color, text }) {
       </div>
     </div>
   );
-            }
+}
+
+export function RobotBanner({ onBack, busy }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 440,
+        margin: "4px 0 6px",
+        padding: "8px 10px",
+        borderRadius: 14,
+        background: "linear-gradient(145deg,#4a1d96,#1e3a8a)",
+        border: "2px solid #ffcf54",
+        boxShadow: "0 0 14px #8a4dff",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        boxSizing: "border-box",
+        textAlign: "left",
+      }}
+    >
+      <span style={{ fontSize: 30 }}>🤖</span>
+      <div style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
+        The robot is playing for you
+      </div>
+      <button
+        onClick={onBack}
+        disabled={busy}
+        style={{
+          padding: "9px 14px",
+          borderRadius: 12,
+          border: "none",
+          background: "linear-gradient(180deg,#ffd54a,#f5a623)",
+          color: "#5a2a00",
+          fontWeight: 900,
+          fontSize: 15,
+          cursor: "pointer",
+          boxShadow: "0 3px 0 #b36b00",
+        }}
+      >
+        ✋ I'm back
+      </button>
+    </div>
+  );
+}
