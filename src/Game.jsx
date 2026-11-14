@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { COLORS, SAFE, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 import Board from "./Board.jsx";
 import { Die, ChatArea, Bubble, Winner } from "./Parts.jsx";
+import { PlayerBar, TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
 
 export default function Game() {
   const [players, setPlayers] = useState([]);
@@ -18,8 +19,11 @@ export default function Game() {
   const [panel, setPanel] = useState(null);
   const [text, setText] = useState("");
   const [bubble, setBubble] = useState(null);
+  const [, setTick] = useState(0);
   const timer = useRef(null);
   const bubbleTimer = useRef(null);
+  const actRef = useRef(null);
+  const phase = useRef({ key: "", t: 0 });
 
   useEffect(
     () => () => {
@@ -44,6 +48,14 @@ export default function Game() {
     });
   }, []);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTick((x) => x + 1);
+      if (actRef.current) actRef.current();
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+
   const goHome = () => {
     window.location.hash = "";
   };
@@ -66,7 +78,7 @@ export default function Game() {
       <div style={{ textAlign: "left" }}>
         <div style={logo}>♛ LUDO</div>
         <div style={{ fontSize: 9, letterSpacing: 1, color: "#ffe887", fontWeight: 700 }}>
-          ROYAL FANTASY
+          TRIPLE TTT
         </div>
       </div>
       <div style={{ flex: 1 }} />
@@ -112,7 +124,7 @@ export default function Game() {
           Start
         </button>
         <p style={{ opacity: 0.7, maxWidth: 280 }}>
-          Pass the phone between players. Online games and bets come next.
+          Pass the phone between players. Each turn has 10 seconds before the robot plays.
         </p>
       </div>
     );
@@ -189,6 +201,17 @@ export default function Game() {
     }
   };
 
+  const key = turn + "-" + dice + "-" + winner;
+  if (phase.current.key !== key) phase.current = { key, t: Date.now() + 10000 };
+  const left = Math.max(0, (phase.current.t - Date.now()) / 1000);
+
+  actRef.current = () => {
+    if (winner !== null || rolling) return;
+    if (Date.now() < phase.current.t) return;
+    if (dice === null) roll();
+    else if (movable.length) moveToken(pickBest(tokens[ci], dice, movable));
+  };
+
   const sendMsg = (content, big) => {
     const t = content.trim();
     if (!t) return;
@@ -200,6 +223,20 @@ export default function Game() {
   };
 
   const hint = msg || (dice === null ? "Tap GO to roll" : "Tap a glowing pawn");
+  const timerText =
+    left <= 0.3
+      ? "🤖 Robot is playing..."
+      : COLORS[ci].name + ": " + (dice === null ? "roll the dice" : "pick a pawn");
+
+  const items = players.map((c) => ({
+    key: c,
+    color: c,
+    label: COLORS[c].name,
+    avatar: "♟",
+    pct: calcProgress(tokens[c]),
+    active: c === ci,
+    you: false,
+  }));
 
   return (
     <div style={page}>
@@ -211,18 +248,11 @@ export default function Game() {
 
       {topBar}
 
-      <div
-        style={{
-          margin: "8px 0 6px",
-          color: "#ffdb75",
-          textShadow: "0 0 12px orange",
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: 1,
-        }}
-      >
-        🏰 ✦ THE ENCHANTED KINGDOM ✦ 🐉
-      </div>
+      <PlayerBar items={items} />
+
+      {winner === null && (
+        <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+      )}
 
       <Board
         players={players}
@@ -243,27 +273,6 @@ export default function Game() {
           maxWidth: 440,
         }}
       >
-        <div>
-          <div
-            style={{
-              width: 54,
-              height: 54,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 28,
-              background: `radial-gradient(circle, rgba(255,255,255,.4), ${COLORS[ci].hex})`,
-              border: "4px solid #ffd84d",
-              boxShadow: `0 0 15px ${COLORS[ci].hex}`,
-            }}
-          >
-            ♟
-          </div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#ffe887", marginTop: 2 }}>
-            {COLORS[ci].name}
-          </div>
-        </div>
-
         <Die
           v={face}
           rolling={rolling}
@@ -311,4 +320,4 @@ export default function Game() {
       <Winner winner={winner} onAgain={() => setPlayers([])} onHome={goHome} />
     </div>
   );
-      }
+        }
