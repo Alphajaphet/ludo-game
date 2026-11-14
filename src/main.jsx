@@ -6,6 +6,7 @@ import Lobby from "./Lobby.jsx";
 import RoomPage from "./RoomPage.jsx";
 import Welcome from "./Welcome.jsx";
 import InstallButton from "./InstallButton.jsx";
+import UpdateBanner from "./UpdateBanner.jsx";
 import { supabase } from "./supabase";
 
 window.__installEvt = null;
@@ -60,18 +61,29 @@ function Root() {
     return () => clearInterval(id);
   }, [isHome]);
 
-  if (!welcomed) return <Welcome onDone={finish} />;
-
-  if (hash === "#play") return <Game />;
-  if (hash === "#online") return <Lobby />;
-  if (hash.startsWith("#room-")) {
+  let view;
+  if (!welcomed) {
+    view = <Welcome onDone={finish} />;
+  } else if (hash === "#play") {
+    view = <Game />;
+  } else if (hash === "#online") {
+    view = <Lobby />;
+  } else if (hash.startsWith("#room-")) {
     const code = hash.slice(6).toUpperCase();
-    return <RoomPage key={code} code={code} />;
+    view = <RoomPage key={code} code={code} />;
+  } else {
+    view = (
+      <>
+        <App />
+        <InstallButton />
+      </>
+    );
   }
+
   return (
     <>
-      <App />
-      <InstallButton />
+      {view}
+      <UpdateBanner />
     </>
   );
 }
