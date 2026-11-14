@@ -44,26 +44,56 @@ export default function InstallButton() {
 
   return (
     <>
-      <button
-        onClick={install}
+      <style>{`
+        @keyframes fingerPoint {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(12px); }
+        }
+        @keyframes installGlow {
+          0%, 100% { box-shadow: 0 0 10px #148bff; }
+          50% { box-shadow: 0 0 22px #ffd54a, 0 0 8px #148bff; }
+        }
+      `}</style>
+
+      <div
         style={{
           position: "fixed",
           right: 12,
           bottom: 92,
           zIndex: 60,
-          border: "2px solid #ffcf54",
-          background: "linear-gradient(145deg,#15245d,#050b2d)",
-          boxShadow: "0 0 14px #148bff",
-          color: "#fff",
-          borderRadius: 20,
-          padding: "10px 16px",
-          fontSize: 15,
-          fontWeight: 800,
-          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
         }}
       >
-        📲 Install app
-      </button>
+        <span
+          style={{
+            fontSize: 42,
+            lineHeight: 1,
+            pointerEvents: "none",
+            filter: "drop-shadow(0 3px 4px rgba(0,0,0,.6))",
+            animation: "fingerPoint .9s ease-in-out infinite",
+          }}
+        >
+          👉
+        </span>
+        <button
+          onClick={install}
+          style={{
+            border: "2px solid #ffcf54",
+            background: "linear-gradient(145deg,#15245d,#050b2d)",
+            color: "#fff",
+            borderRadius: 20,
+            padding: "10px 16px",
+            fontSize: 15,
+            fontWeight: 800,
+            cursor: "pointer",
+            animation: "installGlow 1.6s ease-in-out infinite",
+          }}
+        >
+          📲 Install app
+        </button>
+      </div>
 
       {help && (
         <div
@@ -117,4 +147,4 @@ export default function InstallButton() {
       )}
     </>
   );
-        }
+  }
