@@ -4,7 +4,7 @@ import AuthGate from "./AuthGate.jsx";
 import Board from "./Board.jsx";
 import Waiting from "./Waiting.jsx";
 import { Die, ChatArea, Bubble, Winner } from "./Parts.jsx";
-import { PlayerBar, TurnTimer, calcProgress } from "./Progress.jsx";
+import { PlayerBar, TurnTimer, RobotBanner, calcProgress } from "./Progress.jsx";
 import { COLORS, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 
 function Room({ code, myId }) {
@@ -192,6 +192,8 @@ function Room({ code, myId }) {
   const cur = seats[room.turn];
   const ci = cur.color;
   const myTurn = cur.uid === myId;
+  const mySeat = seats.find((s) => s.uid === myId);
+  const iAmAuto = !!(mySeat && mySeat.auto === true);
   const ended = room.status === "finished";
   const canRoll = myTurn && room.dice === null && !rolling && !busy && !ended;
   const movable =
@@ -203,14 +205,18 @@ function Room({ code, myId }) {
   const left = deadlineMs
     ? Math.max(0, (deadlineMs - (Date.now() + offsetRef.current)) / 1000)
     : 0;
-  const timerText =
-    left <= 0.3
-      ? "🤖 Robot is playing..."
-      : myTurn
-      ? room.dice === null
-        ? "Your turn: roll the dice!"
-        : "Your turn: pick a pawn!"
-      : cur.name + " is playing";
+  const curAuto = cur.auto === true;
+  const timerText = curAuto
+    ? myTurn
+      ? "🤖 Robot is playing for you"
+      : "🤖 Robot is playing for " + cur.name
+    : left <= 0.3
+    ? "🤖 Robot is playing..."
+    : myTurn
+    ? room.dice === null
+      ? "Your turn: roll the dice!"
+      : "Your turn: pick a pawn!"
+    : cur.name + " is playing";
 
   const items = seats.map((s, i) => ({
     key: s.uid,
@@ -220,6 +226,7 @@ function Room({ code, myId }) {
     pct: calcProgress(room.tokens[s.color]),
     active: i === room.turn,
     you: s.uid === myId,
+    auto: s.auto === true,
   }));
 
   const roll = async () => {
@@ -240,6 +247,14 @@ function Room({ code, myId }) {
     else setRoom(data);
   };
 
+  const takeControl = async () => {
+    setBusy(true);
+    const { data, error: e } = await supabase.rpc("take_control", { p_id: room.id });
+    setBusy(false);
+    if (e) setNote(e.message);
+    else setRoom(data);
+  };
+
   const sendMsg = (content, big) => {
     const t = content.trim();
     if (!t || !channel.current) return;
@@ -247,7 +262,11 @@ function Room({ code, myId }) {
     channel.current.send({
       type: "broadcast",
       event: "msg",
-      payload: { ci: mine ? mine.color : 0, text: t, big },
+      payload: {
+        ci: mine ? mine.color : 0,
+        text: big || !mine ? t : mine.name + ": " + t,
+        big,
+      },
     });
     setPanel(null);
     setText("");
@@ -276,8 +295,15 @@ function Room({ code, myId }) {
 
       <PlayerBar items={items} />
 
+      {iAmAuto && !ended && <RobotBanner onBack={takeControl} busy={busy} />}
+
       {deadlineMs > 0 && !ended && (
-        <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+        <TurnTimer
+          left={left}
+          total={curAuto ? 1.5 : 10}
+          color={COLORS[ci].hex}
+          text={timerText}
+        />
       )}
 
       <Board players={players} tokens={room.tokens} ci={ci} movable={movable} onMove={move} />
@@ -312,7 +338,10 @@ function Room({ code, myId }) {
         </button>
       </div>
 
-      <p style={{ opacity: 0.9, minHeight: 24, margin: "8px 0" }}>{note || room.msg || hint}</p>
+      <p style={{ margin: "8px 0 0", fontWeight: 800, color: "#ffe887", minHeight: 22 }}>
+        {note || room.msg}
+      </p>
+      <p style={{ opacity: 0.85, margin: "2px 0 8px", fontSize: 14 }}>{hint}</p>
 
       <Bubble bubble={bubble} />
 
@@ -340,4 +369,4 @@ export default function RoomPage({ code }) {
       {(session) => <Room code={code} myId={session.user.id} />}
     </AuthGate>
   );
-    }
+      }
