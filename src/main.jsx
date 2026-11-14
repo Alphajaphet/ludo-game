@@ -5,7 +5,15 @@ import Game from "./Game.jsx";
 import Lobby from "./Lobby.jsx";
 import RoomPage from "./RoomPage.jsx";
 import Welcome from "./Welcome.jsx";
+import InstallButton from "./InstallButton.jsx";
 import { supabase } from "./supabase";
+
+window.__installEvt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  window.__installEvt = e;
+  window.dispatchEvent(new Event("installready"));
+});
 
 function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -60,7 +68,12 @@ function Root() {
     const code = hash.slice(6).toUpperCase();
     return <RoomPage key={code} code={code} />;
   }
-  return <App />;
+  return (
+    <>
+      <App />
+      <InstallButton />
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
