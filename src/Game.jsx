@@ -5,6 +5,8 @@ import Board from "./Board.jsx";
 import { Arena } from "./Corners.jsx";
 import { ChatArea, Bubble, Winner } from "./Parts.jsx";
 import { TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
+import SoundButton from "./SoundButton.jsx";
+import { sfx } from "./sound.js";
 
 export default function Game() {
   const [players, setPlayers] = useState([]);
@@ -25,6 +27,7 @@ export default function Game() {
   const timer = useRef(null);
   const bubbleTimer = useRef(null);
   const actRef = useRef(null);
+  const lastTick = useRef("");
   const phase = useRef({ key: "", t: 0 });
 
   useEffect(
@@ -63,6 +66,7 @@ export default function Game() {
   };
 
   const start = (n) => {
+    sfx("tap");
     const list = n === 2 ? [0, 2] : n === 3 ? [0, 1, 2] : [0, 1, 2, 3];
     const t = {};
     list.forEach((c) => (t[c] = [-1, -1, -1, -1]));
@@ -86,6 +90,7 @@ export default function Game() {
         </div>
       </div>
       <div style={{ flex: 1 }} />
+      <SoundButton />
       <div style={pill}>💎 {wallet.diamonds}</div>
       <div style={pill}>🪙 {wallet.coins}</div>
     </div>
@@ -102,7 +107,10 @@ export default function Game() {
           {[2, 3, 4].map((n) => (
             <button
               key={n}
-              onClick={() => setCount(n)}
+              onClick={() => {
+                sfx("tap");
+                setCount(n);
+              }}
               style={{
                 width: 92,
                 height: 90,
@@ -144,6 +152,7 @@ export default function Game() {
   const roll = () => {
     if (!canRoll) return;
     const v = 1 + Math.floor(Math.random() * 6);
+    sfx("roll");
     setRolling(true);
     setMsg("");
     setDiceVals((d) => ({ ...d, [ci]: v }));
@@ -151,6 +160,7 @@ export default function Game() {
     timer.current = setTimeout(() => {
       setRolling(false);
       setDice(v);
+      if (v === 6) sfx("six");
       const any = [0, 1, 2, 3].some((t) => canMove(tokens[ci][t], v));
       if (!any) {
         setMsg("No move possible");
@@ -187,9 +197,11 @@ export default function Game() {
     setTokens(next);
     setDice(null);
     if (next[ci].every((p) => p === 56)) {
+      sfx("win");
       setWinner(ci);
       return;
     }
+    sfx(captured ? "capture" : np === 56 ? "home" : "move");
     if (dice === 6 || captured || np === 56) {
       setMsg(
         captured ? "Captured! Roll again" : np === 56 ? "Home! Roll again" : "Six! Roll again"
@@ -206,14 +218,25 @@ export default function Game() {
 
   actRef.current = () => {
     if (winner !== null || rolling) return;
+    const rem = Math.ceil((phase.current.t - Date.now()) / 1000);
+    if (rem <= 3 && rem >= 1 && lastTick.current !== key + ":" + rem) {
+      lastTick.current = key + ":" + rem;
+      sfx("tick");
+    }
     if (Date.now() < phase.current.t) return;
-    if (dice === null) roll();
-    else if (movable.length) moveToken(pickBest(tokens[ci], dice, movable));
+    if (dice === null) {
+      sfx("robot");
+      roll();
+    } else if (movable.length) {
+      sfx("robot");
+      moveToken(pickBest(tokens[ci], dice, movable));
+    }
   };
 
   const sendMsg = (content, big) => {
     const t = content.trim();
     if (!t) return;
+    sfx("pop");
     setBubble({ ci, text: t, big });
     setPanel(null);
     setText("");
