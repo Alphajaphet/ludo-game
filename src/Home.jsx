@@ -86,6 +86,7 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
             <span style={plus} onClick={() => soon("Watching ads")}>▶</span>
           </div>
           <div style={{ flex: 1 }} />
+          <SoundButton size={34} />
           <button style={pill} onClick={() => setMenu(!menu)}>⚙️</button>
         </div>
 
