@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { COLORS, SAFE, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 import Board from "./Board.jsx";
-import { Die, ChatArea, Bubble, Winner } from "./Parts.jsx";
-import { PlayerBar, TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
+import { Arena } from "./Corners.jsx";
+import { ChatArea, Bubble, Winner } from "./Parts.jsx";
+import { TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
 
 export default function Game() {
   const [players, setPlayers] = useState([]);
@@ -11,7 +12,8 @@ export default function Game() {
   const [tokens, setTokens] = useState({});
   const [turn, setTurn] = useState(0);
   const [dice, setDice] = useState(null);
-  const [face, setFace] = useState(6);
+  const [diceVals, setDiceVals] = useState({});
+  const [rollCounts, setRollCounts] = useState({});
   const [rolling, setRolling] = useState(false);
   const [msg, setMsg] = useState("");
   const [winner, setWinner] = useState(null);
@@ -27,7 +29,7 @@ export default function Game() {
 
   useEffect(
     () => () => {
-      clearInterval(timer.current);
+      clearTimeout(timer.current);
       clearTimeout(bubbleTimer.current);
     },
     []
@@ -68,6 +70,8 @@ export default function Game() {
     setTokens(t);
     setTurn(0);
     setDice(null);
+    setDiceVals({});
+    setRollCounts({});
     setWinner(null);
     setMsg("");
   };
@@ -139,29 +143,24 @@ export default function Game() {
 
   const roll = () => {
     if (!canRoll) return;
+    const v = 1 + Math.floor(Math.random() * 6);
     setRolling(true);
     setMsg("");
-    let n = 0;
-    timer.current = setInterval(() => {
-      setFace(1 + Math.floor(Math.random() * 6));
-      n += 1;
-      if (n >= 8) {
-        clearInterval(timer.current);
-        const v = 1 + Math.floor(Math.random() * 6);
-        setFace(v);
-        setRolling(false);
-        setDice(v);
-        const any = [0, 1, 2, 3].some((t) => canMove(tokens[ci][t], v));
-        if (!any) {
-          setMsg("No move possible");
-          timer.current = setTimeout(() => {
-            setDice(null);
-            setMsg("");
-            setTurn((x) => (x + 1) % players.length);
-          }, 1100);
-        }
+    setDiceVals((d) => ({ ...d, [ci]: v }));
+    setRollCounts((c) => ({ ...c, [ci]: (c[ci] || 0) + 1 }));
+    timer.current = setTimeout(() => {
+      setRolling(false);
+      setDice(v);
+      const any = [0, 1, 2, 3].some((t) => canMove(tokens[ci][t], v));
+      if (!any) {
+        setMsg("No move possible");
+        timer.current = setTimeout(() => {
+          setDice(null);
+          setMsg("");
+          setTurn((x) => (x + 1) % players.length);
+        }, 1100);
       }
-    }, 80);
+    }, 950);
   };
 
   const moveToken = (t) => {
@@ -222,86 +221,56 @@ export default function Game() {
     bubbleTimer.current = setTimeout(() => setBubble(null), 2500);
   };
 
-  const hint = msg || (dice === null ? "Tap GO to roll" : "Tap a glowing pawn");
+  const hint = msg || (dice === null ? "Tap the glowing dice to roll" : "Tap a glowing pawn");
   const timerText =
     left <= 0.3
       ? "🤖 Robot is playing..."
       : COLORS[ci].name + ": " + (dice === null ? "roll the dice" : "pick a pawn");
 
-  const items = players.map((c) => ({
-    key: c,
-    color: c,
-    label: COLORS[c].name,
-    avatar: "♟",
-    pct: calcProgress(tokens[c]),
-    active: c === ci,
-    you: false,
-  }));
+  const slots = {};
+  players.forEach((c) => {
+    slots[c] = {
+      name: COLORS[c].name,
+      avatar: "♟",
+      pct: calcProgress(tokens[c]),
+      auto: false,
+      you: false,
+    };
+  });
 
   return (
     <div style={page}>
       <style>{`
-        @keyframes shake { 0%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} 100%{transform:rotate(-8deg)} }
         @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,255,255,.95)} 100%{box-shadow:0 0 0 12px rgba(255,255,255,0)} }
         @keyframes pop { 0%{transform:scale(.6);opacity:0} 100%{transform:scale(1);opacity:1} }
       `}</style>
 
       {topBar}
 
-      <PlayerBar items={items} />
-
       {winner === null && (
-        <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+        <div style={{ marginTop: 6, width: "100%", maxWidth: 440 }}>
+          <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+        </div>
       )}
 
-      <Board
-        players={players}
-        tokens={tokens}
-        ci={ci}
-        movable={movable}
-        onMove={moveToken}
-      />
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 14,
-          margin: "14px 0 4px",
-          width: "100%",
-          maxWidth: 440,
-        }}
+      <Arena
+        slots={slots}
+        vals={diceVals}
+        rollIds={rollCounts}
+        activeColor={ci}
+        rollableColor={canRoll ? ci : null}
+        onRoll={roll}
       >
-        <Die
-          v={face}
-          rolling={rolling}
-          glow={COLORS[ci].hex}
-          disabled={!canRoll}
-          onClick={roll}
+        <Board
+          players={players}
+          tokens={tokens}
+          ci={ci}
+          movable={movable}
+          onMove={moveToken}
         />
+      </Arena>
 
-        <button
-          onClick={roll}
-          disabled={!canRoll}
-          style={{
-            border: "3px solid #ffda57",
-            borderRadius: 20,
-            padding: "10px 26px",
-            background: "linear-gradient(#26dfff,#0060ff,#062a9d)",
-            boxShadow: "0 0 18px #00aaff",
-            color: "#fff",
-            fontSize: 30,
-            fontWeight: 900,
-            opacity: canRoll ? 1 : 0.45,
-            cursor: canRoll ? "pointer" : "default",
-          }}
-        >
-          GO
-        </button>
-      </div>
-
-      <p style={{ opacity: 0.9, minHeight: 24, margin: "8px 0" }}>{hint}</p>
+      <p style={{ opacity: 0.9, minHeight: 24, margin: "10px 0 8px" }}>{hint}</p>
 
       <Bubble bubble={bubble} />
 
@@ -320,4 +289,4 @@ export default function Game() {
       <Winner winner={winner} onAgain={() => setPlayers([])} onHome={goHome} />
     </div>
   );
-        }
+    }
