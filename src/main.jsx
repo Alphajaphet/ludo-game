@@ -8,6 +8,7 @@ import Welcome from "./Welcome.jsx";
 import InstallButton from "./InstallButton.jsx";
 import UpdateBanner from "./UpdateBanner.jsx";
 import { supabase } from "./supabase";
+import "./sound.js";
 
 window.__installEvt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
