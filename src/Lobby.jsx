@@ -183,12 +183,12 @@ function LobbyInner() {
             <h3 style={{ margin: "4px 0 14px", color: "#ffdb75", textShadow: "0 0 12px orange" }}>
               {pick === "quick" ? "Play now" : "Create a room"}
             </h3>
-            <p style={{ margin: "0 0 10px", fontWeight: 700 }}>How many players?</p>
+            <p style={{ margin: "0 0 10px", fontWeight: 700 }}>Entry 🪙 500 each. Winner takes all!</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               {[2, 3, 4].map((n) => (
                 <button key={n} disabled={busy} onClick={() => start(n)} style={numBtn}>
                   {n}
-                  <div style={{ fontSize: 11 }}>Players</div>
+                  <div style={{ fontSize: 11 }}>Win 🪙{n * 500}</div>
                 </button>
               ))}
             </div>
