@@ -7,9 +7,16 @@ import { ChatArea, Bubble, Winner } from "./Parts.jsx";
 import { TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
 import SoundButton from "./SoundButton.jsx";
 import { sfx } from "./sound.js";
+import { aiPick } from "./ai.js";
+
+const HUMAN = 2;
+const ORDER = { 2: [2, 0], 3: [2, 3, 0], 4: [2, 3, 0, 1] };
 
 export default function Game() {
   const [players, setPlayers] = useState([]);
+  const [bots, setBots] = useState([]);
+  const [screen, setScreen] = useState("menu");
+  const [opp, setOpp] = useState(1);
   const [count, setCount] = useState(2);
   const [tokens, setTokens] = useState({});
   const [turn, setTurn] = useState(0);
@@ -20,6 +27,7 @@ export default function Game() {
   const [msg, setMsg] = useState("");
   const [winner, setWinner] = useState(null);
   const [wallet, setWallet] = useState({ coins: 0, diamonds: 0 });
+  const [me, setMe] = useState({ avatar: "🙂", name: "You" });
   const [panel, setPanel] = useState(null);
   const [text, setText] = useState("");
   const [bubble, setBubble] = useState(null);
@@ -44,11 +52,13 @@ export default function Game() {
       if (!id) return;
       supabase
         .from("profiles")
-        .select("coins,diamonds")
+        .select("coins,diamonds,avatar,display_name")
         .eq("id", id)
         .maybeSingle()
         .then(({ data: p }) => {
-          if (p) setWallet({ coins: p.coins, diamonds: p.diamonds });
+          if (!p) return;
+          setWallet({ coins: p.coins, diamonds: p.diamonds });
+          setMe({ avatar: p.avatar || "🙂", name: p.display_name || "You" });
         });
     });
   }, []);
@@ -61,23 +71,43 @@ export default function Game() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (players.length && bots.length && winner === null && !bots.includes(players[turn])) {
+      sfx("turn");
+    }
+  }, [turn, players]);
+
   const goHome = () => {
     window.location.hash = "";
   };
 
-  const start = (n) => {
-    sfx("tap");
-    const list = n === 2 ? [0, 2] : n === 3 ? [0, 1, 2] : [0, 1, 2, 3];
+  const begin = (list, botList, firstMsg) => {
     const t = {};
     list.forEach((c) => (t[c] = [-1, -1, -1, -1]));
     setPlayers(list);
+    setBots(botList);
     setTokens(t);
     setTurn(0);
     setDice(null);
     setDiceVals({});
     setRollCounts({});
     setWinner(null);
-    setMsg("");
+    setMsg(firstMsg || "");
+  };
+
+  const startPass = (n) => {
+    sfx("tap");
+    begin(n === 2 ? [0, 2] : n === 3 ? [0, 1, 2] : [0, 1, 2, 3], [], "");
+  };
+
+  const startCpu = (o) => {
+    sfx("tap");
+    const list = ORDER[o + 1];
+    begin(
+      list,
+      list.filter((c) => c !== HUMAN),
+      "You are Red (bottom-right). Tap your dice!"
+    );
   };
 
   const topBar = (
@@ -96,13 +126,14 @@ export default function Game() {
     </div>
   );
 
-  if (players.length === 0) {
+  if (players.length === 0 && screen === "pass") {
     return (
       <div style={page}>
         {topBar}
         <h2 style={{ marginTop: 40, color: "#ffdb75", textShadow: "0 0 12px orange" }}>
-          Select Players
+          Play with friends
         </h2>
+        <p style={{ margin: "0 0 12px", opacity: 0.85 }}>How many players?</p>
         <div style={{ display: "flex", gap: 10 }}>
           {[2, 3, 4].map((n) => (
             <button
@@ -130,27 +161,89 @@ export default function Game() {
           ))}
         </div>
         <button
-          style={{ ...yellowBtn, marginTop: 36, fontSize: 26, padding: "16px 64px" }}
-          onClick={() => start(count)}
+          style={{ ...yellowBtn, marginTop: 30, fontSize: 24, padding: "14px 56px" }}
+          onClick={() => startPass(count)}
         >
           Start
         </button>
         <p style={{ opacity: 0.7, maxWidth: 280 }}>
           Pass the phone between players. Each turn has 10 seconds before the robot plays.
         </p>
+        <button
+          style={{ ...pill, marginTop: 6, padding: "10px 18px" }}
+          onClick={() => setScreen("menu")}
+        >
+          ← Play vs Computer
+        </button>
+      </div>
+    );
+  }
+
+  if (players.length === 0) {
+    return (
+      <div style={page}>
+        {topBar}
+        <div style={{ fontSize: 64, marginTop: 24 }}>🤖</div>
+        <h2 style={{ margin: "4px 0 2px", color: "#ffdb75", textShadow: "0 0 12px orange" }}>
+          Play vs Computer
+        </h2>
+        <p style={{ margin: "0 0 14px", opacity: 0.85 }}>How many computer players?</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[1, 2, 3].map((n) => (
+            <button
+              key={n}
+              onClick={() => {
+                sfx("tap");
+                setOpp(n);
+              }}
+              style={{
+                width: 92,
+                height: 84,
+                borderRadius: 16,
+                border: opp === n ? "4px solid #ffd54a" : "4px solid transparent",
+                background: "linear-gradient(#26dfff,#0060ff,#062a9d)",
+                boxShadow: "0 0 14px #00aaff",
+                color: "#fff",
+                fontSize: 26,
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              {n}
+              <div style={{ fontSize: 12 }}>{n === 1 ? "Computer" : "Computers"}</div>
+            </button>
+          ))}
+        </div>
+        <button
+          style={{ ...yellowBtn, marginTop: 26, fontSize: 28, padding: "18px 44px" }}
+          onClick={() => startCpu(opp)}
+        >
+          ▶ PLAY NOW
+        </button>
+        <button
+          style={{ ...pill, marginTop: 24, padding: "12px 20px", fontSize: 15 }}
+          onClick={() => {
+            sfx("tap");
+            setScreen("pass");
+          }}
+        >
+          👥 Play with friends on this phone
+        </button>
       </div>
     );
   }
 
   const ci = players[turn];
-  const canRoll = !(rolling || dice !== null || winner !== null);
+  const isBot = bots.includes(ci);
+  const canRollNow = !(rolling || dice !== null || winner !== null);
+  const canRoll = canRollNow && !isBot;
   const movable =
     dice !== null && !rolling
       ? [0, 1, 2, 3].filter((t) => canMove(tokens[ci][t], dice))
       : [];
 
   const roll = () => {
-    if (!canRoll) return;
+    if (!canRollNow) return;
     const v = 1 + Math.floor(Math.random() * 6);
     sfx("roll");
     setRolling(true);
@@ -218,6 +311,12 @@ export default function Game() {
 
   actRef.current = () => {
     if (winner !== null || rolling) return;
+    if (isBot) {
+      if (Date.now() < phase.current.t - 10000 + (dice === null ? 900 : 1000)) return;
+      if (dice === null) roll();
+      else if (movable.length) moveToken(aiPick(ci, dice, movable, tokens, players));
+      return;
+    }
     const rem = Math.ceil((phase.current.t - Date.now()) / 1000);
     if (rem <= 3 && rem >= 1 && lastTick.current !== key + ":" + rem) {
       lastTick.current = key + ":" + rem;
@@ -237,29 +336,51 @@ export default function Game() {
     const t = content.trim();
     if (!t) return;
     sfx("pop");
-    setBubble({ ci, text: t, big });
+    setBubble({ ci: bots.length ? HUMAN : ci, text: t, big });
     setPanel(null);
     setText("");
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 2500);
   };
 
-  const hint = msg || (dice === null ? "Tap the glowing dice to roll" : "Tap a glowing pawn");
+  const slots = {};
+  players.forEach((c) => {
+    const bi = bots.indexOf(c);
+    if (bots.length === 0) {
+      slots[c] = {
+        name: COLORS[c].name,
+        avatar: "♟",
+        pct: calcProgress(tokens[c]),
+        auto: false,
+        you: false,
+      };
+    } else if (bi >= 0) {
+      slots[c] = {
+        name: bots.length > 1 ? "Computer " + (bi + 1) : "Computer",
+        avatar: "🤖",
+        pct: calcProgress(tokens[c]),
+        auto: false,
+        you: false,
+      };
+    } else {
+      slots[c] = {
+        name: me.name,
+        avatar: me.avatar,
+        pct: calcProgress(tokens[c]),
+        auto: false,
+        you: true,
+      };
+    }
+  });
+
+  const hint = isBot
+    ? "Computer is playing..."
+    : msg || (dice === null ? "Tap the glowing dice to roll" : "Tap a glowing pawn");
   const timerText =
     left <= 0.3
       ? "🤖 Robot is playing..."
-      : COLORS[ci].name + ": " + (dice === null ? "roll the dice" : "pick a pawn");
-
-  const slots = {};
-  players.forEach((c) => {
-    slots[c] = {
-      name: COLORS[c].name,
-      avatar: "♟",
-      pct: calcProgress(tokens[c]),
-      auto: false,
-      you: false,
-    };
-  });
+      : (bots.length ? "Your turn: " : COLORS[ci].name + ": ") +
+        (dice === null ? "roll the dice" : "pick a pawn");
 
   return (
     <div style={page}>
@@ -272,7 +393,22 @@ export default function Game() {
 
       {winner === null && (
         <div style={{ marginTop: 6, width: "100%", maxWidth: 440 }}>
-          <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+          {isBot ? (
+            <div
+              style={{
+                margin: "4px 0 6px",
+                fontSize: 13,
+                fontWeight: 700,
+                textAlign: "left",
+                color: "#ffe887",
+                height: 28,
+              }}
+            >
+              🤖 {slots[ci].name} is thinking...
+            </div>
+          ) : (
+            <TurnTimer left={left} total={10} color={COLORS[ci].hex} text={timerText} />
+          )}
         </div>
       )}
 
@@ -288,7 +424,7 @@ export default function Game() {
           players={players}
           tokens={tokens}
           ci={ci}
-          movable={movable}
+          movable={isBot ? [] : movable}
           onMove={moveToken}
         />
       </Arena>
@@ -309,7 +445,14 @@ export default function Game() {
         }}
       />
 
-      <Winner winner={winner} onAgain={() => setPlayers([])} onHome={goHome} />
+      <Winner
+        winner={winner}
+        onAgain={() => {
+          setPlayers([]);
+          setScreen("menu");
+        }}
+        onHome={goHome}
+      />
     </div>
   );
-    }
+}
