@@ -345,4 +345,4 @@ export default function RoomPage({ code }) {
       {(session) => <Room code={code} myId={session.user.id} />}
     </AuthGate>
   );
-  }
+            }
