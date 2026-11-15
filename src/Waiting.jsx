@@ -33,7 +33,7 @@ export default function Waiting({ room, myId, note, onStart, onShare, onCopy, on
         {room.code}
       </div>
       <p style={{ opacity: 0.85, margin: "2px 0 12px" }}>
-        Players {n}/{room.max_players}
+        Players {n}/{room.max_players} · Entry 🪙{room.entry} · Prize 🪙{room.entry * room.max_players}
       </p>
 
       <div style={{ width: "100%", maxWidth: 360 }}>
