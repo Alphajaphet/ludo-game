@@ -173,7 +173,7 @@ export function ChatArea({ panel, setPanel, text, setText, onSend, onPick }) {
   );
 }
 
-export function Winner({ winner, onAgain, onHome }) {
+export function Winner({ winner, onAgain, onHome, prize, youWon, winnerName }) {
   if (winner === null) return null;
   return (
     <div
@@ -190,7 +190,7 @@ export function Winner({ winner, onAgain, onHome }) {
     >
       <div style={{ fontSize: 72 }}>🏆</div>
       <h2 style={{ color: COLORS[winner].hex, textShadow: "0 0 14px #ffd45a" }}>
-        {COLORS[winner].name} wins!
+        {youWon ? "You win!" : (winnerName || COLORS[winner].name) + " wins!"}{prize ? " 🪙 " + prize : ""}
       </h2>
       <button style={yellowBtn} onClick={onAgain}>
         Play again
