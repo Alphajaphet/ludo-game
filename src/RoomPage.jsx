@@ -3,15 +3,16 @@ import { supabase } from "./supabase";
 import AuthGate from "./AuthGate.jsx";
 import Board from "./Board.jsx";
 import Waiting from "./Waiting.jsx";
-import { Die, ChatArea, Bubble, Winner } from "./Parts.jsx";
-import { PlayerBar, TurnTimer, RobotBanner, calcProgress } from "./Progress.jsx";
+import { Arena } from "./Corners.jsx";
+import { ChatArea, Bubble, Winner } from "./Parts.jsx";
+import { TurnTimer, RobotBanner, calcProgress } from "./Progress.jsx";
 import { COLORS, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 
 function Room({ code, myId }) {
   const [room, setRoom] = useState(null);
   const [error, setError] = useState("");
-  const [face, setFace] = useState(6);
   const [rolling, setRolling] = useState(false);
+  const [rollCounts, setRollCounts] = useState({});
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState(null);
   const [text, setText] = useState("");
@@ -102,30 +103,22 @@ function Room({ code, myId }) {
     if (!room) return;
     if (seen.current === null) {
       seen.current = room.roll_no;
-      if (room.last_roll) setFace(room.last_roll);
       return;
     }
     if (room.roll_no === seen.current) return;
     seen.current = room.roll_no;
-    const final = room.last_roll;
-    clearInterval(rollTimer.current);
+    const lc = room.last_color;
+    if (lc !== null && lc !== undefined) {
+      setRollCounts((c) => ({ ...c, [lc]: (c[lc] || 0) + 1 }));
+    }
+    clearTimeout(rollTimer.current);
     setRolling(true);
-    let n = 0;
-    rollTimer.current = setInterval(() => {
-      n += 1;
-      if (n >= 7) {
-        clearInterval(rollTimer.current);
-        setFace(final);
-        setRolling(false);
-      } else {
-        setFace(1 + Math.floor(Math.random() * 6));
-      }
-    }, 80);
+    rollTimer.current = setTimeout(() => setRolling(false), 950);
   }, [room]);
 
   useEffect(
     () => () => {
-      clearInterval(rollTimer.current);
+      clearTimeout(rollTimer.current);
       clearTimeout(bubbleTimer.current);
     },
     []
@@ -214,20 +207,21 @@ function Room({ code, myId }) {
     ? "🤖 Robot is playing..."
     : myTurn
     ? room.dice === null
-      ? "Your turn: roll the dice!"
+      ? "Your turn: tap your dice!"
       : "Your turn: pick a pawn!"
     : cur.name + " is playing";
 
-  const items = seats.map((s, i) => ({
-    key: s.uid,
-    color: s.color,
-    label: s.name,
-    avatar: s.avatar,
-    pct: calcProgress(room.tokens[s.color]),
-    active: i === room.turn,
-    you: s.uid === myId,
-    auto: s.auto === true,
-  }));
+  const slots = {};
+  seats.forEach((s) => {
+    slots[s.color] = {
+      name: s.name,
+      avatar: s.avatar,
+      pct: calcProgress(room.tokens[s.color]),
+      auto: s.auto === true,
+      you: s.uid === myId,
+    };
+  });
+  const vals = room.dice_vals || {};
 
   const roll = async () => {
     if (!canRoll) return;
@@ -274,14 +268,13 @@ function Room({ code, myId }) {
 
   const hint = myTurn
     ? room.dice === null
-      ? "Tap GO to roll"
+      ? "Tap your dice to roll"
       : "Tap a glowing pawn"
     : "Waiting for " + cur.name + "...";
 
   return (
     <div style={page}>
       <style>{`
-        @keyframes shake { 0%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} 100%{transform:rotate(-8deg)} }
         @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,255,255,.95)} 100%{box-shadow:0 0 0 12px rgba(255,255,255,0)} }
         @keyframes pop { 0%{transform:scale(.6);opacity:0} 100%{transform:scale(1);opacity:1} }
       `}</style>
@@ -293,52 +286,35 @@ function Room({ code, myId }) {
         <div style={pill}>Room {room.code}</div>
       </div>
 
-      <PlayerBar items={items} />
-
-      {iAmAuto && !ended && <RobotBanner onBack={takeControl} busy={busy} />}
-
-      {deadlineMs > 0 && !ended && (
-        <TurnTimer
-          left={left}
-          total={curAuto ? 1.5 : 10}
-          color={COLORS[ci].hex}
-          text={timerText}
-        />
+      {iAmAuto && !ended && (
+        <div style={{ marginTop: 6, width: "100%", maxWidth: 440 }}>
+          <RobotBanner onBack={takeControl} busy={busy} />
+        </div>
       )}
 
-      <Board players={players} tokens={room.tokens} ci={ci} movable={movable} onMove={move} />
+      {deadlineMs > 0 && !ended && (
+        <div style={{ marginTop: 6, width: "100%", maxWidth: 440 }}>
+          <TurnTimer
+            left={left}
+            total={curAuto ? 1.5 : 10}
+            color={COLORS[ci].hex}
+            text={timerText}
+          />
+        </div>
+      )}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 14,
-          margin: "14px 0 4px",
-        }}
+      <Arena
+        slots={slots}
+        vals={vals}
+        rollIds={rollCounts}
+        activeColor={ci}
+        rollableColor={canRoll ? ci : null}
+        onRoll={roll}
       >
-        <Die v={face} rolling={rolling} glow={COLORS[ci].hex} disabled={!canRoll} onClick={roll} />
-        <button
-          onClick={roll}
-          disabled={!canRoll}
-          style={{
-            border: "3px solid #ffda57",
-            borderRadius: 20,
-            padding: "10px 26px",
-            background: "linear-gradient(#26dfff,#0060ff,#062a9d)",
-            boxShadow: "0 0 18px #00aaff",
-            color: "#fff",
-            fontSize: 30,
-            fontWeight: 900,
-            opacity: canRoll ? 1 : 0.45,
-            cursor: canRoll ? "pointer" : "default",
-          }}
-        >
-          GO
-        </button>
-      </div>
+        <Board players={players} tokens={room.tokens} ci={ci} movable={movable} onMove={move} />
+      </Arena>
 
-      <p style={{ margin: "8px 0 0", fontWeight: 800, color: "#ffe887", minHeight: 22 }}>
+      <p style={{ margin: "10px 0 0", fontWeight: 800, color: "#ffe887", minHeight: 22 }}>
         {note || room.msg}
       </p>
       <p style={{ opacity: 0.85, margin: "2px 0 8px", fontSize: 14 }}>{hint}</p>
@@ -369,4 +345,4 @@ export default function RoomPage({ code }) {
       {(session) => <Room code={code} myId={session.user.id} />}
     </AuthGate>
   );
-      }
+  }
