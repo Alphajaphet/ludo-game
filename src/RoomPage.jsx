@@ -6,6 +6,8 @@ import Waiting from "./Waiting.jsx";
 import { Arena } from "./Corners.jsx";
 import { ChatArea, Bubble, Winner } from "./Parts.jsx";
 import { TurnTimer, RobotBanner, calcProgress } from "./Progress.jsx";
+import SoundButton from "./SoundButton.jsx";
+import { sfx } from "./sound.js";
 import { COLORS, canMove, page, pill, round, yellowBtn, logo } from "./ludoData.js";
 
 function Room({ code, myId }) {
@@ -27,6 +29,8 @@ function Room({ code, myId }) {
   const offsetRef = useRef(0);
   const botKey = useRef("");
   const botAt = useRef(0);
+  const prevRoom = useRef(null);
+  const lastTick = useRef("");
 
   roomRef.current = room;
 
@@ -67,7 +71,10 @@ function Room({ code, myId }) {
       { event: "UPDATE", schema: "public", table: "rooms", filter: "id=eq." + roomId },
       (payload) => setRoom(payload.new)
     );
-    ch.on("broadcast", { event: "msg" }, ({ payload }) => showBubble(payload));
+    ch.on("broadcast", { event: "msg" }, ({ payload }) => {
+      sfx("pop");
+      showBubble(payload);
+    });
     ch.subscribe();
     channel.current = ch;
     const poll = setInterval(async () => {
@@ -85,8 +92,19 @@ function Room({ code, myId }) {
       setTick((x) => x + 1);
       const r = roomRef.current;
       if (!r || r.status !== "playing" || !r.turn_deadline) return;
-      const late = Date.now() + offsetRef.current - new Date(r.turn_deadline).getTime();
-      const mine = r.seats[r.turn] && r.seats[r.turn].uid === myId;
+      const dl = new Date(r.turn_deadline).getTime();
+      const now = Date.now() + offsetRef.current;
+      const late = now - dl;
+      const seat = r.seats[r.turn];
+      const mine = seat && seat.uid === myId;
+      const sec = Math.ceil((dl - now) / 1000);
+      if (mine && seat.auto !== true && sec >= 1 && sec <= 3) {
+        const tk = r.turn_deadline + ":" + sec;
+        if (lastTick.current !== tk) {
+          lastTick.current = tk;
+          sfx("tick");
+        }
+      }
       if (late < (mine ? 300 : 2500)) return;
       const key = r.roll_no + ":" + r.turn + ":" + (r.dice === null ? "r" : "m") + ":" + r.turn_deadline;
       if (botKey.current === key && Date.now() - botAt.current < 3000) return;
@@ -111,9 +129,57 @@ function Room({ code, myId }) {
     if (lc !== null && lc !== undefined) {
       setRollCounts((c) => ({ ...c, [lc]: (c[lc] || 0) + 1 }));
     }
+    const six = room.last_roll === 6;
+    sfx("roll");
     clearTimeout(rollTimer.current);
     setRolling(true);
-    rollTimer.current = setTimeout(() => setRolling(false), 950);
+    rollTimer.current = setTimeout(() => {
+      setRolling(false);
+      if (six) sfx("six");
+    }, 950);
+  }, [room]);
+
+  useEffect(() => {
+    if (!room) return;
+    const p = prevRoom.current;
+    prevRoom.current = room;
+    if (!p) return;
+    if (room.status === "finished" && p.status !== "finished") {
+      sfx("win");
+      return;
+    }
+    if (room.status !== "playing") return;
+    if (p.status === "waiting") {
+      const first = room.seats[room.turn];
+      if (first && first.uid === myId) sfx("turn");
+      return;
+    }
+    if (JSON.stringify(p.tokens) !== JSON.stringify(room.tokens)) {
+      let captured = false;
+      let home = false;
+      Object.keys(room.tokens || {}).forEach((col) => {
+        const before = (p.tokens && p.tokens[col]) || [];
+        const after = room.tokens[col] || [];
+        for (let k = 0; k < 4; k += 1) {
+          if (after[k] === 56 && before[k] !== 56) home = true;
+          if (before[k] >= 0 && after[k] === -1) captured = true;
+        }
+      });
+      Object.keys(p.tokens || {}).forEach((col) => {
+        const before = p.tokens[col] || [];
+        const after = (room.tokens && room.tokens[col]) || [];
+        for (let k = 0; k < 4; k += 1) {
+          if (before[k] >= 0 && after[k] === -1) captured = true;
+        }
+      });
+      sfx(captured ? "capture" : home ? "home" : "move");
+    }
+    const newAuto = room.seats.some(
+      (s, i) => s.auto === true && !(p.seats[i] && p.seats[i].auto === true)
+    );
+    if (newAuto) sfx("robot");
+    const cur = room.seats[room.turn];
+    if (room.turn !== p.turn && cur && cur.uid === myId) sfx("turn");
   }, [room]);
 
   useEffect(
@@ -283,6 +349,7 @@ function Room({ code, myId }) {
         <button style={round} onClick={() => (window.location.hash = "online")}>‹</button>
         <div style={logo}>♛ LUDO</div>
         <div style={{ flex: 1 }} />
+        <SoundButton />
         <div style={pill}>Room {room.code}</div>
       </div>
 
@@ -345,4 +412,4 @@ export default function RoomPage({ code }) {
       {(session) => <Room code={code} myId={session.user.id} />}
     </AuthGate>
   );
-            }
+  }
