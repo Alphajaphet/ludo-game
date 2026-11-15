@@ -350,7 +350,7 @@ function Room({ code, myId }) {
         <div style={logo}>♛ LUDO</div>
         <div style={{ flex: 1 }} />
         <SoundButton />
-        <div style={pill}>Room {room.code}</div>
+        <div style={pill}>🏆 🪙{room.pot} · {room.code}</div>
       </div>
 
       {iAmAuto && !ended && (
@@ -399,6 +399,9 @@ function Room({ code, myId }) {
 
       <Winner
         winner={ended ? room.winner : null}
+        prize={room.pot}
+        youWon={ended && room.seats.some((s) => s.color === room.winner && s.uid === myId)}
+        winnerName={ended ? (room.seats.find((s) => s.color === room.winner) || {}).name : ""}
         onAgain={() => (window.location.hash = "online")}
         onHome={() => (window.location.hash = "")}
       />
