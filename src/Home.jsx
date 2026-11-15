@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import SoundButton from "./SoundButton.jsx";
 
 const pill = {
   display: "flex",
