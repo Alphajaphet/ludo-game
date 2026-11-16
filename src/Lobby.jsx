@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
 import AuthGate from "./AuthGate.jsx";
+import { AdButton } from "./Ads.jsx";
 import { page, round, yellowBtn, logo } from "./ludoData.js";
 
 const bigCard = {
@@ -127,6 +128,7 @@ function LobbyInner() {
         </span>
       </button>
 
+      <div style={{ marginTop: 18 }}><AdButton /></div>
       <p style={{ margin: "22px 0 6px", fontWeight: 700, opacity: 0.9 }}>Have a code?</p>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input
