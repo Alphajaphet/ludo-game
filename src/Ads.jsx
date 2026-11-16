@@ -5,36 +5,39 @@ import { sfx } from "./sound.js";
 export const AD_REWARD = 8;
 const AD_SECONDS = 5;
 
+const AD_SRC = "https://bauval.org/21/6f33d0e10f55a9bc999e1d79fd9fe510";
+const AD_CONTAINER_ID = "container-6f33d0e10f55a9bc999e1d79fd9fe510";
+
+// While Adsterra is still reviewing the site, no ad can show.
+// true  = still give diamonds when no ad appears (testing)
+// false = give diamonds only when a real ad appeared (use after approval)
+const ALLOW_WITHOUT_AD = true;
+
 export function AdModal({ open, onClose, onReward }) {
-  const [phase, setPhase] = useState("loading");
+  const [phase, setPhase] = useState("starting");
   const [left, setLeft] = useState(AD_SECONDS);
   const [err, setErr] = useState("");
   const [result, setResult] = useState(null);
   const [round, setRound] = useState(0);
   const adId = useRef(null);
-  const timer = useRef(null);
+  const holder = useRef(null);
   const alive = useRef(true);
-  const real = typeof window !== "undefined" && typeof window.showRewardedAd === "function";
 
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
-      clearInterval(timer.current);
     };
   }, []);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    clearInterval(timer.current);
-    setPhase("loading");
+    setPhase("starting");
     setErr("");
     setResult(null);
     setLeft(AD_SECONDS);
-
-    (async () => {
-      const { data, error } = await supabase.rpc("start_ad");
+    supabase.rpc("start_ad").then(({ data, error }) => {
       if (cancelled) return;
       if (error) {
         setErr(error.message);
@@ -42,43 +45,63 @@ export function AdModal({ open, onClose, onReward }) {
         return;
       }
       adId.current = data.id;
-      setPhase("playing");
-
-      if (real) {
-        try {
-          const ok = await window.showRewardedAd();
-          if (cancelled) return;
-          if (ok) setPhase("ready");
-          else {
-            setErr("The ad was not completed, so there is no reward.");
-            setPhase("error");
-          }
-        } catch (e) {
-          if (!cancelled) {
-            setErr("No ad is available right now. Try again later.");
-            setPhase("error");
-          }
-        }
-        return;
-      }
-
-      let s = AD_SECONDS;
-      setLeft(s);
-      timer.current = setInterval(() => {
-        s -= 1;
-        setLeft(s);
-        if (s <= 0) {
-          clearInterval(timer.current);
-          setPhase("ready");
-        }
-      }, 1000);
-    })();
-
+      setPhase("loading");
+    });
     return () => {
       cancelled = true;
-      clearInterval(timer.current);
     };
   }, [open, round]);
+
+  useEffect(() => {
+    if (!open || phase !== "loading") return;
+    const h = holder.current;
+    if (!h) return;
+    const old = document.getElementById(AD_CONTAINER_ID);
+    if (old) old.innerHTML = "";
+    h.querySelectorAll("script").forEach((n) => n.remove());
+    const s = document.createElement("script");
+    s.async = true;
+    s.setAttribute("data-cfasync", "false");
+    s.src = AD_SRC;
+    h.appendChild(s);
+
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries += 1;
+      const c = document.getElementById(AD_CONTAINER_ID);
+      const shown = c && (c.childElementCount > 0 || c.offsetHeight > 30);
+      if (shown) {
+        clearInterval(poll);
+        setPhase("playing");
+        return;
+      }
+      if (tries >= 16) {
+        clearInterval(poll);
+        if (ALLOW_WITHOUT_AD) {
+          setPhase("playing");
+        } else {
+          setErr("No ad is available right now. Please try again in a minute.");
+          setPhase("error");
+        }
+      }
+    }, 500);
+    return () => clearInterval(poll);
+  }, [open, phase]);
+
+  useEffect(() => {
+    if (!open || phase !== "playing") return;
+    let s = AD_SECONDS;
+    setLeft(s);
+    const t = setInterval(() => {
+      s -= 1;
+      setLeft(s);
+      if (s <= 0) {
+        clearInterval(t);
+        setPhase("ready");
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [open, phase]);
 
   const collect = async () => {
     setPhase("claiming");
@@ -96,6 +119,8 @@ export function AdModal({ open, onClose, onReward }) {
   };
 
   if (!open) return null;
+
+  const showSlot = ["loading", "playing", "ready", "claiming"].includes(phase);
 
   const btn = {
     padding: "12px 30px",
@@ -122,18 +147,20 @@ export function AdModal({ open, onClose, onReward }) {
         zIndex: 150,
         fontFamily: "system-ui, Arial, sans-serif",
         color: "#fff",
+        overflowY: "auto",
       }}
     >
       <div
         style={{
           position: "relative",
-          width: "min(90vw, 360px)",
+          width: "min(92vw, 360px)",
           background: "linear-gradient(145deg,#15245d,#050b2d)",
           border: "2px solid #ffcf54",
           borderRadius: 22,
-          padding: 20,
+          padding: 18,
           textAlign: "center",
           boxShadow: "0 0 26px #148bff",
+          margin: "12px 0",
         }}
       >
         <button
@@ -157,29 +184,26 @@ export function AdModal({ open, onClose, onReward }) {
           💎 Free diamonds
         </h3>
 
-        {phase === "loading" && <p>Loading ad...</p>}
+        {phase === "starting" && <p>Loading...</p>}
 
-        {(phase === "playing" || phase === "ready" || phase === "claiming") && (
+        {showSlot && (
           <>
             <div
+              ref={holder}
               style={{
-                height: 150,
-                borderRadius: 16,
-                background: "linear-gradient(135deg,#3b2a8c,#0b1d63)",
-                border: "2px dashed rgba(255,255,255,.35)",
+                minHeight: 250,
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
                 justifyContent: "center",
-                gap: 4,
+                alignItems: "center",
+                background: "rgba(255,255,255,.07)",
+                borderRadius: 16,
+                overflow: "hidden",
               }}
             >
-              <div style={{ fontSize: 44 }}>📺</div>
-              <div style={{ fontWeight: 800 }}>Ad space</div>
-              {!real && (
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Real ads are coming soon</div>
-              )}
+              <div id={AD_CONTAINER_ID} />
             </div>
+
+            {phase === "loading" && <p style={{ margin: "12px 0 0" }}>Loading ad...</p>}
 
             {phase === "playing" && (
               <>
@@ -194,16 +218,14 @@ export function AdModal({ open, onClose, onReward }) {
                 >
                   <div
                     style={{
-                      width: real ? "100%" : ((AD_SECONDS - left) / AD_SECONDS) * 100 + "%",
+                      width: ((AD_SECONDS - left) / AD_SECONDS) * 100 + "%",
                       height: "100%",
                       background: "#ffd54a",
                       transition: "width 1s linear",
                     }}
                   />
                 </div>
-                <p style={{ margin: 0, opacity: 0.9 }}>
-                  {real ? "Watching ad..." : "Ad ends in " + left + "s"}
-                </p>
+                <p style={{ margin: 0, opacity: 0.9 }}>Ad ends in {left}s</p>
               </>
             )}
 
@@ -212,7 +234,7 @@ export function AdModal({ open, onClose, onReward }) {
                 Collect 💎 {AD_REWARD}
               </button>
             )}
-            {phase === "claiming" && <p>Collecting...</p>}
+            {phase === "claiming" && <p style={{ margin: "12px 0 0" }}>Collecting...</p>}
           </>
         )}
 
@@ -284,4 +306,4 @@ export function AdButton({ onReward, style }) {
       <AdModal open={open} onClose={() => setOpen(false)} onReward={onReward} />
     </>
   );
-        }
+    }
