@@ -6,6 +6,7 @@ import { Arena } from "./Corners.jsx";
 import { ChatArea, Bubble, Winner } from "./Parts.jsx";
 import { TurnTimer, calcProgress, pickBest } from "./Progress.jsx";
 import SoundButton from "./SoundButton.jsx";
+import { AdButton } from "./Ads.jsx";
 import { sfx } from "./sound.js";
 import { aiPick } from "./ai.js";
 
@@ -133,7 +134,8 @@ export default function Game() {
         <h2 style={{ marginTop: 40, color: "#ffdb75", textShadow: "0 0 12px orange" }}>
           Play with friends
         </h2>
-        <p style={{ margin: "0 0 12px", opacity: 0.85 }}>How many players?</p>
+        <div style={{ margin: "6px 0 14px" }}><AdButton onReward={(d) => setWallet((w) => ({ ...w, diamonds: d }))} /></div>
+        <p style={{ margin: "0 0 14px", opacity: 0.85 }}>How many computer players?</p>
         <div style={{ display: "flex", gap: 10 }}>
           {[2, 3, 4].map((n) => (
             <button
