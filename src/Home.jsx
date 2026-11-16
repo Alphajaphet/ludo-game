@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import SoundButton from "./SoundButton.jsx";
+import { AdModal, AD_REWARD } from "./Ads.jsx";
 
 const pill = {
   display: "flex",
@@ -40,6 +41,8 @@ const card = {
 export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
   const [toast, setToast] = useState("");
   const [menu, setMenu] = useState(false);
+  const [ad, setAd] = useState(false);
+  const [dia, setDia] = useState(profile.diamonds);
   const t = useRef(null);
 
   const soon = (what) => {
@@ -47,6 +50,10 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
     setToast(what + " is coming soon");
     clearTimeout(t.current);
     t.current = setTimeout(() => setToast(""), 1800);
+  };
+
+  const goOnline = () => {
+    window.location.hash = "online";
   };
 
   return (
@@ -82,8 +89,8 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
             <span style={plus} onClick={() => soon("Buying coins")}>+</span>
           </div>
           <div style={pill}>
-            💎 {profile.diamonds}
-            <span style={plus} onClick={() => soon("Watching ads")}>▶</span>
+            💎 {dia}
+            <span style={plus} onClick={() => setAd(true)}>▶</span>
           </div>
           <div style={{ flex: 1 }} />
           <SoundButton size={34} />
@@ -128,15 +135,11 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
 
         <div style={{ display: "flex", justifyContent: "space-around", margin: "18px 0 8px" }}>
           {[
-            ["🎁", "Daily Reward"],
-            ["🪙", "Free Coins"],
-            ["📝", "Feedback"],
-          ].map(([icon, label]) => (
-            <div
-              key={label}
-              onClick={() => soon(label)}
-              style={{ textAlign: "center", cursor: "pointer" }}
-            >
+            ["🎁", "Daily Reward", () => soon("Daily Reward")],
+            ["💎", "Free 💎 +" + AD_REWARD, () => setAd(true)],
+            ["📝", "Feedback", () => soon("Feedback")],
+          ].map(([icon, label, act]) => (
+            <div key={label} onClick={act} style={{ textAlign: "center", cursor: "pointer" }}>
               <div style={{ fontSize: 38 }}>{icon}</div>
               <div
                 style={{
@@ -155,7 +158,7 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
 
         <div style={{ display: "flex", gap: 12, margin: "18px 0 12px" }}>
           <button
-            onClick={() => { window.location.hash = "online"; }}
+            onClick={goOnline}
             style={{
               ...card,
               flex: 1,
@@ -197,7 +200,7 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
 
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => { window.location.hash = "online"; }}
+            onClick={goOnline}
             style={{
               ...card,
               flex: 1,
@@ -281,6 +284,8 @@ export default function Home({ profile, onPlayLocal, onEdit, onLogout }) {
           </div>
         ))}
       </div>
+
+      <AdModal open={ad} onClose={() => setAd(false)} onReward={setDia} />
     </div>
   );
-              }
+}
